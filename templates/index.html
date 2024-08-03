@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotion Detection</title>
+    <style>
+        html, body {
+            height: 100%; /* Ensure body takes full viewport height */
+            margin: 0; /* Remove default margin */
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column; /* Stack children vertically */
+            align-items: center; /* Center horizontally */
+            text-align: center;
+            background-image: url("https://i.postimg.cc/xC2DM3hY/background-image.png");
+            background-size: cover;
+            margin-top: 30px;
+        }
+        .form-container {
+            display: flex;
+            justify-content: center; /* Aligns forms horizontally in the center */
+            gap: 40px; /* Adds space between each form */
+            margin: 10px 0;
+            flex-wrap: wrap; /* Allows forms to wrap to the next line on smaller screens */
+        }
+        form {
+            background-color: #fffee7;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            height: 450px;
+            width: 400px; /* Set a fixed width for each form */
+        }
+        input[type="file"], input[type="text"] {
+            margin-bottom: 10px;
+            width: 100%; /* Makes the input fields take up the full width of the form */
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            width: 100%; /* Makes the buttons take up the full width of the form */
+            background-color: #ffa700;
+            color: white;
+            border-radius: 8px;
+        }
+
+        .prediction-container {
+            display: flex;
+            justify-content: center; /* Centers the prediction box */
+            margin-top: 10px;
+        }
+
+        .prediction-box {
+            height: 50px;
+            width: 450px;
+            background-color: #fc8019;
+            color: whitesmoke;
+            text-align: center;
+            display: flex;
+            border: 4px solid #fc8019;
+            align-items: center; /* Centers text vertically */
+            justify-content: center; /* Centers text horizontally */
+            border-radius: 8px; /* Optional: adds rounded corners */
+            transition-property: all;
+            transition-duration: 1s;
+            font-size: 18px;
+        }
+
+        .prediction-box:hover {
+            background-color: whitesmoke;
+            border: 4px solid orange;
+            color: orange;
+            font-size: 20px;
+        }
+
+        .title {
+            height: 50px;
+            width: 430px;
+            background-color: white;
+            border: 4px solid #fc8019;
+            font-size: 45px;
+            text-align: center;
+            align-items: center;
+            justify-content: center;
+            display: flex;
+            border-radius: 15px;
+            font-weight: bolder;
+            color: #fc8019;
+            -webkit-text-stroke: 0.5px red;
+            outline: 2px solid red;
+            transition-property: all;
+            transition-duration: 1s;
+        }
+
+        .title:hover {
+            background-color: #ffa700;
+            color: whitesmoke;
+            font-size: 48px;
+        }
+
+        .text-input {
+            height: 390px;
+            width: 390px;
+            border-radius: 8px;
+            padding: 10px; /* Add padding for better text visibility */
+            box-sizing: border-box; /* Ensure padding doesn't affect overall dimensions */
+            font-size: large;
+        }
+
+        .upload-label {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            width: 380px;
+            height: 385px; /* Adjust height as needed */
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            margin-left: 6px;
+        }
+
+        .upload-label.image-label::before {
+            content: 'Upload your image';
+            text-align: center;
+            display: block;
+            font-size: 16px;
+            color: #ccc;
+        }
+
+        .upload-label.speech-label::before {
+            content: 'Upload your speech';
+            text-align: center;
+            display: block;
+            font-size: 16px;
+            color: #ccc;
+        }
+
+        .image-preview, .speech-preview {
+            position: absolute;
+            width: 100%;
+            height: 100%; /* Maintain aspect ratio */
+        }
+
+    </style>
+</head>
+<body>
+    <div class = "title">
+        Emotion Detection
+    </div>
+    
+    <div class="form-container">
+        <!-- Image Upload Form -->
+        <form action="/" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="input_type" value="image">
+            <label class="upload-label image-label">
+                <input type="file" name="file" accept="image/*" id="file-upload" onchange="previewFile()" required hidden>
+                <img id="image-preview" src="#" alt="Image Preview" class="image-preview" style="display:none;">
+            </label>
+            <button type="submit">Predict Image Emotion</button>
+        </form>
+
+        <!-- Speech Upload Form -->
+        <form action="/" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="input_type" value="speech">
+            <label class="upload-label speech-label" id="speechUploadLabel">
+                <input type="file" name="file" accept=".wav" onchange="showSpeechBox()" required hidden>
+            </label>
+            <button type="submit">Predict Speech Emotion</button>
+        </form>
+
+        <!-- Text Input Form -->
+        <form action="/" method="post">
+            <input type="hidden" name="input_type" value="text">
+            <textarea name="text" class="text-input" placeholder="Enter your text here...." required></textarea>
+            <br>
+            <button type="submit">Predict Text Emotion</button>
+        </form>
+    </div>
+
+    {% if prediction %}
+    <div class="prediction-container">
+        <div class="prediction-box">
+            <h2>Predicted Emotion: {{ prediction }} {{ emoji }}</h2>
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        function previewFile() {
+            var preview = document.getElementById('image-preview');
+            var file    = document.querySelector('input[type=file]').files[0];
+            var reader  = new FileReader();
+          
+            reader.onloadend = function () {
+                preview.src = reader.result;
+                preview.style.display = 'block';
+            }
+          
+            if (file) {
+                reader.readAsDataURL(file);
+            } else {
+                preview.src = "";
+                preview.style.display = 'none';
+            }
+        }
+
+        function showSpeechBox() {
+            var label = document.getElementById('speechUploadLabel');
+        }
+    </script>
+</body>
+</html>
